@@ -58,6 +58,63 @@
           </ul>
         );
       };
+
+      // Main App component
+      const App = () => {
+        const [results, setResults] = useState([]);
+        const [cache, setCache] = useState({});
+
+        // Function to handle form submission
+        const handleFormSubmit = (names) => {
+          console.log("Form submitted with names:", names);
+          const cachedResults = names.filter((name) => cache[name]);
+          const newNames = names.filter((name) => !cache[name]);
+
+          const cachedResultsData = cachedResults.map((name) => ({
+            name,
+            age: cache[name],
+          }));
+
+          if (newNames.length > 0) {
+            const queryString = newNames
+              .map((name) => `name[]=${name}`)
+              .join("&");
+            const url = `https://api.agify.io?${queryString}`;
+            console.log("API request URL:", url);
+
+            // Make API request to Agify.io
+            $.get(url, (data) => {
+              const newCache = { ...cache };
+              data.forEach((result) => {
+                newCache[result.name] = result.age;
+              });
+
+              // Update state with new and cached results
+              setCache(newCache);
+              setResults([...results, ...cachedResultsData, ...data]);
+            }).fail((jqXHR, textStatus, errorThrown) => {
+              console.error(
+                "Error making API request:",
+                textStatus,
+                errorThrown
+              );
+            });
+          } else {
+            setResults([...results, ...cachedResultsData]);
+          }
+        };
+
+        return (
+          <div>
+            <h1>Predict Age with Agify</h1>
+            <FormComponent onSubmit={handleFormSubmit} />
+            <ResultComponent results={results} />
+          </div>
+        );
+      };
+
+      // Render the App component
+      ReactDOM.render(<App />, document.querySelector("#root"));
     </script>
   </body>
 </html>
