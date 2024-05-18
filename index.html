@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>React Test</title>
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+    ></script>
+    <script src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+    <script
+      src="https://code.jquery.com/jquery-3.6.4.min.js"
+      integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8="
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const { useState } = React;
+
+      // Component for the form input and submit button
+      const FormComponent = ({ onSubmit }) => {
+        const [names, setNames] = useState("");
+
+        const handleSubmit = (event) => {
+          event.preventDefault();
+          const nameArray = names.split(",").map((name) => name.trim());
+          console.log("Names to submit:", nameArray);
+          onSubmit(nameArray);
+        };
+
+        return (
+          <form onSubmit={handleSubmit}>
+            <input
+              type="text"
+              value={names}
+              onChange={(e) => setNames(e.target.value)}
+              placeholder="Enter name"
+            />
+            <button type="submit">Submit</button>
+          </form>
+        );
+      };
+
+      // Component for displaying the results
+      const ResultComponent = ({ results }) => {
+        return (
+          <ul>
+            {results.map((result, index) => (
+              <li key={index}>
+                {result.name}: {result.age} years old
+              </li>
+            ))}
+          </ul>
+        );
+      };
+
+      // Main App component
+      const App = () => {
+        const [results, setResults] = useState([]);
+        const [cache, setCache] = useState({});
+
+        // Function to handle form submission
+        const handleFormSubmit = (names) => {
+          console.log("Form submitted with names:", names);
+          const cachedResults = names.filter((name) => cache[name]);
+          const newNames = names.filter((name) => !cache[name]);
+
+          const cachedResultsData = cachedResults.map((name) => ({
+            name,
+            age: cache[name],
+          }));
+
+          if (newNames.length > 0) {
+            const queryString = newNames
+              .map((name) => `name[]=${name}`)
+              .join("&");
+            const url = `https://api.agify.io?${queryString}`;
+            console.log("API request URL:", url);
+
+            // Make API request to Agify.io
+            $.get(url, (data) => {
+              const newCache = { ...cache };
+              data.forEach((result) => {
+                newCache[result.name] = result.age;
+              });
+
+              // Update state with new and cached results
+              setCache(newCache);
+              setResults([...results, ...cachedResultsData, ...data]);
+            }).fail((jqXHR, textStatus, errorThrown) => {
+              console.error(
+                "Error making API request:",
+                textStatus,
+                errorThrown
+              );
+            });
+          } else {
+            setResults([...results, ...cachedResultsData]);
+          }
+        };
+
+        return (
+          <div>
+            <h1>Predict Age with Agify</h1>
+            <FormComponent onSubmit={handleFormSubmit} />
+            <ResultComponent results={results} />
+          </div>
+        );
+      };
+
+      // Render the App component
+      ReactDOM.render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
